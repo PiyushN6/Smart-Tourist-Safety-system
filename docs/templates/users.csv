@@ -1,0 +1,5 @@
+email,password,role
+admin@example.com,Admin@123,admin
+operator@example.com,Operator@123,operator
+police@example.com,Police@123,police
+tourist1@example.com,Tourist@123,tourist
