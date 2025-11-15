@@ -25,6 +25,14 @@ export default function App() {
   const [gfName, setGfName] = useState<string>("")
   const [gfRisk, setGfRisk] = useState<string>("low")
   const [gfCoords, setGfCoords] = useState<string>("[[77.2090,28.6139],[77.2190,28.6139],[77.2190,28.6239],[77.2090,28.6239],[77.2090,28.6139]]")
+  const [toasts, setToasts] = useState<{ id: number; text: string; tone: 'success' | 'error' }[]>([])
+  const toastId = useRef<number>(1)
+
+  const showToast = (text: string, tone: 'success' | 'error' = 'success') => {
+    const id = toastId.current++
+    setToasts(prev => [...prev, { id, text, tone }])
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000)
+  }
 
   useEffect(() => {
     // Load JWT from localStorage on first mount
@@ -89,8 +97,13 @@ export default function App() {
         body
       })
       const json = await res.json()
-      if (json && json.access_token) setApiToken(json.access_token)
-    } catch (_) { /* ignore */ }
+      if (json && json.access_token) {
+        setApiToken(json.access_token)
+        showToast('Logged in', 'success')
+      } else {
+        showToast('Login failed', 'error')
+      }
+    } catch (_) { showToast('Login error', 'error') }
   }
 
   const listGeofences = async () => {
@@ -113,7 +126,8 @@ export default function App() {
       await res.json()
       listGeofences()
       refreshGeofences()
-    } catch (_) { /* ignore */ }
+      showToast('Geofence created', 'success')
+    } catch (_) { showToast('Create geofence failed', 'error') }
   }
 
   const deleteGeofence = async (id: number) => {
@@ -125,7 +139,8 @@ export default function App() {
       })
       listGeofences()
       refreshGeofences()
-    } catch (_) { /* ignore */ }
+      showToast('Geofence deleted', 'success')
+    } catch (_) { showToast('Delete failed', 'error') }
   }
 
   const moveMock = (dx: number, dy: number) => {
@@ -165,7 +180,7 @@ export default function App() {
       if (mapRef.current && mapRef.current.getSource('geofences')) {
         ;(mapRef.current.getSource('geofences') as mapboxgl.GeoJSONSource).setData(data)
       }
-    } catch (_) { /* ignore */ }
+    } catch (_) { showToast('Failed to load geofences', 'error') }
   }
 
   const refreshAlerts = async () => {
@@ -213,7 +228,8 @@ export default function App() {
       })
       await res.json()
       refreshAlerts()
-    } catch (_) { /* ignore */ }
+      showToast('Location ingested', 'success')
+    } catch (_) { showToast('Ingest failed', 'error') }
   }
 
   const ackAlert = async (id: number) => {
@@ -226,7 +242,8 @@ export default function App() {
       })
       await res.json()
       refreshAlerts()
-    } catch (_) { /* ignore */ }
+      showToast('Alert acknowledged', 'success')
+    } catch (_) { showToast('Acknowledge failed', 'error') }
   }
 
   const resolveAlert = async (id: number) => {
@@ -239,11 +256,20 @@ export default function App() {
       })
       await res.json()
       refreshAlerts()
-    } catch (_) { /* ignore */ }
+      showToast('Alert resolved', 'success')
+    } catch (_) { showToast('Resolve failed', 'error') }
   }
 
   return (
     <div style={{ height: '100vh', width: '100vw' }}>
+      {/* Toasts */}
+      <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {toasts.map(t => (
+          <div key={t.id} style={{ padding: '8px 12px', borderRadius: 6, color: '#fff', background: t.tone === 'success' ? '#16a34a' : '#dc2626', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+            {t.text}
+          </div>
+        ))}
+      </div>
       <div style={{ position: 'absolute', zIndex: 10, padding: 12, display: 'flex', gap: 12 }}>
         <div>
           <div style={{ marginBottom: 8 }}>
@@ -310,6 +336,14 @@ export default function App() {
             <button onClick={() => { setOffset(offset + limit); refreshAlerts() }} style={{ marginLeft: 6 }}>Next</button>
           </div>
           <div style={{ fontSize: 12, color: '#333' }}>Lat: {gps.lat.toFixed(5)} Lng: {gps.lng.toFixed(5)}</div>
+          <div style={{ background: 'white', padding: 8, marginTop: 8, border: '1px solid #eee', borderRadius: 6 }}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>Risk legend</div>
+            <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, background: '#00aa00', display: 'inline-block' }}></span>low</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, background: '#ff8800', display: 'inline-block' }}></span>medium</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, background: '#ff0000', display: 'inline-block' }}></span>high</div>
+            </div>
+          </div>
         </div>
         <div style={{ background: 'white', padding: 8, maxHeight: '40vh', overflow: 'auto', minWidth: 360 }}>
           <div style={{ fontWeight: 700, marginBottom: 6 }}>Live Alerts</div>
