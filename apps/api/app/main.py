@@ -44,3 +44,8 @@ app.include_router(locations.router, prefix="/locations")
 app.include_router(blockchain.router, prefix="/digital-ids")
 app.include_router(alerts.router, prefix="/alerts")
 app.include_router(imports.router, prefix="/imports")
+
+# Friendly root endpoint
+@app.get("/")
+def root():
+    return {"service": "Smart Tourist Safety API", "docs": "/docs", "health": "/healthz"}
